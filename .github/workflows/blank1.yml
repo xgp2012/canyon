@@ -1,8 +1,11 @@
 # 工作流名称
 name: Java 8 Build, Test and Package
 
-# 触发条件：推送到main分支/创建PR时触发
+# 触发条件：手动触发 + 原有自动触发（push/PR）
 on:
+  # 核心：添加手动触发配置
+  workflow_dispatch:
+  # 保留原有自动触发规则（如需仅保留手动触发，可删除以下两行）
   push:
     branches: [ main ]
   pull_request:
@@ -25,22 +28,19 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # 步骤3：编译、测试并打包生成JAR（核心步骤）
+      # 步骤3：编译、测试并打包生成JAR
       - name: Build and package with Maven
         run: |
-          # package命令会自动完成编译、测试、打包（生成JAR）
-          # -B：批处理模式，-DskipTests可选（如需跳过测试则添加）
+          # package命令生成JAR，-DskipTests可选（跳过测试）
           mvn -B clean package --file pom.xml
 
-      # 步骤4：上传JAR包产物（关键：保存打包后的文件）
+      # 步骤4：上传JAR产物
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: java8-project-jar
-          # 匹配target目录下所有jar文件（包含可执行jar）
           path: |
             target/*.jar
-            # 排除测试相关的jar（可选，按需保留）
             !target/*-tests.jar
             !target/*-test.jar
-          retention-days: 30  # 产物保留30天，可按需调整
+          retention-days: 30  # 产物保留30天
