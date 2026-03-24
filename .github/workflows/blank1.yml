@@ -1,40 +1,65 @@
-name: Canyon Build (Java 8)
+name: Canyon Build & Release
 
-# 支持手动触发
+# 触发方式：推送到master + PR + 手动触发
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:    # 手动触发开关
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: write    # 必须加：允许 Action 创建 Release
 
     steps:
-      - name: Checkout code (递归克隆子模块，必须！)
+      - name: Checkout 代码（递归子模块）
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'  # 关键：克隆所有子项目
+          submodules: recursive
           fetch-depth: 0
 
-      - name: Set up JDK 8
+      - name: 配置 Java 8 环境
         uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: 'temurin'
           cache: maven
 
-      # 官方第一步：运行 canyon p 命令
-      - name: Run canyon prepare
-        run: chmod +x canyon && ./canyon p
+      - name: 赋予 canyon 脚本执行权限
+        run: chmod +x ./canyon
 
-      # 官方第二步：构建
-      - name: Build with Maven
+      - name: 执行构建准备 ./canyon p
+        run: ./canyon p
+
+      - name: Maven 编译打包
         run: mvn clean package -DskipTests
 
-      # 上传真正的可运行服务器jar！
-      - name: Upload Canyon Server JAR
+      - name: 上传构建的 JAR（临时 artifact）
         uses: actions/upload-artifact@v4
         with:
-          name: Canyon-Server-JAR
+          name: Canyon-Server
           path: Canyon-Server/target/*.jar
+
+      # ====================== 自动发布 Release ======================
+      - name: 获取版本号与时间
+        id: vars
+        run: |
+          echo "VERSION=beta-1.7.3-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=Canyon Build $(date +'%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.vars.outputs.RELEASE_NAME }}
+          tag_name: ${{ steps.vars.outputs.VERSION }}
+          files: Canyon-Server/target/*.jar
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
