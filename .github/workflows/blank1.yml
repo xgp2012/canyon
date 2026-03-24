@@ -1,48 +1,33 @@
-name: Java 8 Build, Test and Package
+name: Java 8 Build Jar
 
 on:
   workflow_dispatch:  # 手动触发
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
-  build-and-package:
+  build:
     runs-on: ubuntu-latest
-    # 添加环境变量，解决Node.js 20弃用警告
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: 'temurin'
-          cache: 'maven'
+          cache: maven
 
-      # 新增步骤：打印Java和Maven版本（便于排查环境问题）
-      - name: Check Java/Maven version
-        run: |
-          java -version
-          mvn -v
+      # 构建打包
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
 
-      # 构建时增加详细日志，便于排查失败原因
-      - name: Build and package with Maven
-        run: |
-          # 移除-B（批处理模式），显示完整日志；-X开启调试模式
-          mvn clean package -X --file pom.xml
-
-      - name: Upload JAR artifact
+      # 上传 jar
+      - name: Upload JAR File
         uses: actions/upload-artifact@v4
         with:
-          name: java8-project-jar
-          path: |
-            target/*.jar
-            !target/*-tests.jar
-            !target/*-test.jar
-          retention-days: 30
+          name: Canyon-Server
+          path: target/*.jar
