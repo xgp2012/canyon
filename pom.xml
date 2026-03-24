@@ -11,8 +11,5 @@
         <defaultGoal>install</defaultGoal>
         <finalName>${project.artifactId}</finalName>
     </build>
-    <modules>
-        <module>Canyon-API</module>
-        <module>Canyon-Server</module>
-    </modules>
+
 </project>
